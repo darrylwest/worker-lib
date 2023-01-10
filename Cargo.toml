@@ -1,9 +1,9 @@
 [package]
 name = "worker_lib"
-version = "0.1.0"
+version = "0.2.3"
 edition = "2021"
 authors = ["darryl.west@raincitysoftware.com"]
-rust-version = "1.66"
+rust-version = "1.65"
 description = "A framework for supervising multiple async workers with generic tasks"
 keywords = ["supervisor", "worker-pool", "worker", "lib" ]
 license = "MIT OR Apach-2.0"
