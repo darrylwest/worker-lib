@@ -33,5 +33,11 @@ _Customize a worker for different tasks including database connection, local k/v
 * recyles old or damaged workers
 
 
-###### darryl.west | 2023-01-09
+## References
+
+* [Wiki Page](https://github.com/darrylwest/worker-lib/wiki)
+* Async Std
+* Async Channel
+
+###### darryl.west | 2023-01-10
 

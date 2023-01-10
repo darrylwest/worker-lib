@@ -1,6 +1,7 @@
 
 project := "worker-lib"
 
+alias b := build
 alias t := test
 alias ta := test-all
 
