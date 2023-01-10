@@ -19,13 +19,6 @@ pub enum WorkerState {
     Shutdown,
 }
 
-#[derive(Debug, Clone)]
-pub struct Worker {
-    id: String,
-    uptime: Uptime,
-    request_tx: Sender<Command>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerStatus {
     status: String,
@@ -48,6 +41,13 @@ impl WorkerStatus {
             error_count,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Worker {
+    id: String,
+    uptime: Uptime,
+    request_tx: Sender<Command>,
 }
 
 //
