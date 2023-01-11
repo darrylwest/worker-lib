@@ -15,9 +15,8 @@ pub enum Command {
     Set(String, String, Sender<Option<String>>),
     Get(String, Sender<Option<String>>),
     Remove(String, Sender<Option<String>>),
-    // Keys(Sender<Vec<String>>),
+    Keys(Sender<Vec<String>>),
     Len(Sender<usize>),
-    // IsEmpty(Sender<bool>),
     Status(Sender<JsonString>), // request the worker's status
     Shutdown,
 }
@@ -57,6 +56,13 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
                     error_count += send_optional_response(Some(v), tx).await;
                 } else {
                     error_count += send_optional_response(None, tx).await;
+                }
+            }
+            Command::Keys(tx) => {
+                let list: Vec<String> = vec![];
+                if tx.send(list).await.is_err() {
+                    error_count += error_count;
+                    error!("error returning keys");
                 }
             }
             Command::Len(tx) => {
