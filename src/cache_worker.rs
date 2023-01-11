@@ -4,18 +4,21 @@ use async_channel::Sender;
 use domain_keys::keys::RouteKey;
 use log::*;
 // use serde::{Deserialize, Serialize};
-use crate::JsonString;
 use async_channel::Receiver;
+use hashbrown::HashMap;
 use service_uptime::Uptime;
 
-use crate::worker::{WorkerState, WorkerStatus};
+use crate::worker::{JsonString, WorkerState, WorkerStatus};
 
 #[derive(Debug, Clone)]
 pub enum Command {
+    Set(String, String, Sender<Option<String>>),
+    Get(String, Sender<Option<String>>),
+    Remove(String, Sender<Option<String>>),
+    // Keys(Sender<Vec<String>>),
+    // Len(Sender<u64>),
+    // IsEmpty(Sender<bool>),
     Status(Sender<JsonString>), // request the worker's status
-    Set(String, String, Sender<JsonString>),
-    Get(String, Sender<JsonString>),
-    Remove(String, Sender<JsonString>),
     Shutdown,
 }
 
@@ -25,14 +28,8 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
     let mut state = WorkerState::Idle;
     let mut error_count = 0;
 
-    async fn send_response(msg: String, tx: Sender<String>) -> u16 {
-        if let Err(e) = tx.send(msg).await {
-            error!("error sending message: {:?}", e);
-            1u16
-        } else {
-            0u16
-        }
-    }
+    // should replace this with redis at some point
+    let mut cache: HashMap<String, String> = HashMap::new();
 
     // now read and respond to requests
     while let Ok(cmd) = rx.recv().await {
@@ -40,15 +37,27 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
         match cmd {
             Command::Set(key, value, tx) => {
                 info!("k: {}, v: {}", key, value);
-                error_count += send_response("Ok".to_string(), tx).await;
+
+                if let Some(v) = cache.insert(key, value) {
+                    error_count += send_optional_response(Some(v), tx).await;
+                } else {
+                    error_count += send_optional_response(None, tx).await;
+                }
             }
             Command::Get(key, tx) => {
                 info!("get key: {}", key);
-                error_count += send_response("Ok".to_string(), tx).await;
+                error_count += match cache.get(&key) {
+                    Some(v) => send_optional_response(Some(v.to_string()), tx).await,
+                    None => send_optional_response(None, tx).await,
+                }
             }
             Command::Remove(key, tx) => {
                 info!("remove key: {}", key);
-                error_count += send_response("Ok".to_string(), tx).await;
+                if let Some(v) = cache.remove(&key) {
+                    error_count += send_optional_response(Some(v), tx).await;
+                } else {
+                    error_count += send_optional_response(None, tx).await;
+                }
             }
             Command::Status(tx) => {
                 let status = WorkerStatus::new(
@@ -76,6 +85,25 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
                 info!("worker id: {}, state: {:?}", id, state);
                 break;
             }
+        }
+    }
+
+    // helper functions
+    async fn send_optional_response(msg: Option<String>, tx: Sender<Option<String>>) -> u16 {
+        if let Err(e) = tx.send(msg).await {
+            error!("error sending message: {:?}", e);
+            1u16
+        } else {
+            0u16
+        }
+    }
+    // helper functions
+    async fn send_response(msg: String, tx: Sender<String>) -> u16 {
+        if let Err(e) = tx.send(msg).await {
+            error!("error sending message: {:?}", e);
+            1u16
+        } else {
+            0u16
         }
     }
 
@@ -170,6 +198,38 @@ mod tests {
             assert!(resp.is_ok());
             if let Ok(resp) = rx.recv().await {
                 println!("{}", resp);
+            } else {
+                panic!("status response failed");
+            }
+
+            assert!(request_channel.send(Command::Shutdown).await.is_ok());
+        });
+    }
+
+    #[test]
+    fn set_get_remove() {
+        async_std::task::block_on(async move {
+            let worker = Worker::new().await;
+            assert_eq!(worker.id.len(), 16);
+            assert_eq!(worker.get_update_seconds(), 0);
+
+            // the request
+            let request_channel = worker.request_channel();
+
+            // the response channel
+            let (responder, rx) = async_channel::bounded(10);
+
+            let key = String::from("my-key");
+            let value = String::from("my value");
+
+            let msg = Command::Set(key, value, responder);
+            let resp = request_channel.send(msg).await;
+            assert!(resp.is_ok());
+
+            // get the response; should be None on the first insert
+            if let Ok(resp) = rx.recv().await {
+                println!("set response: {:?}", resp);
+                assert_eq!(resp, None);
             } else {
                 panic!("status response failed");
             }

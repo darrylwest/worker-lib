@@ -2,6 +2,8 @@
 ///
 use serde::{Deserialize, Serialize};
 
+pub type JsonString = String;
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub enum WorkerState {
     #[default]
