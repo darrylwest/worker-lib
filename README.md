@@ -27,11 +27,14 @@ _Customize a worker for different tasks including database connection, local k/v
 
 ## Supervisor
 
-* creates a pool
-* allocates workers based on request
-* monitors workers
-* recyles old or damaged workers
+The supervisor provides a API to the specific work needed to be done.  
 
+The supervisor also...
+
+* creates and manages a pool of worders (1..)
+* dispatches requests by routing to a worker
+* monitors worker health, load etc
+* recyles old or damaged workers replacing with new
 
 ## References
 
