@@ -16,7 +16,7 @@ pub enum Command {
     Get(String, Sender<Option<String>>),
     Remove(String, Sender<Option<String>>),
     // Keys(Sender<Vec<String>>),
-    // Len(Sender<u64>),
+    Len(Sender<usize>),
     // IsEmpty(Sender<bool>),
     Status(Sender<JsonString>), // request the worker's status
     Shutdown,
@@ -58,6 +58,10 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
                 } else {
                     error_count += send_optional_response(None, tx).await;
                 }
+            }
+            Command::Len(tx) => {
+                let sz = cache.len();
+                let _r = tx.send(sz).await;
             }
             Command::Status(tx) => {
                 let status = WorkerStatus::new(
@@ -218,11 +222,20 @@ mod tests {
 
             // the response channel
             let (responder, rx) = async_channel::bounded(10);
+            let msg = Command::Len(responder);
+            request_channel
+                .send(msg)
+                .await
+                .expect("IsEmpty should never fail");
+            let sz = rx.recv().await.expect("receeve should not fail");
+            assert_eq!(sz, 0_usize);
 
-            let key = String::from("my-key");
-            let value = String::from("my value");
+            // now set the first value
+            let (responder, rx) = async_channel::bounded(10);
+            let key = "my-key";
+            let value = "my value";
 
-            let msg = Command::Set(key, value, responder);
+            let msg = Command::Set(key.to_string(), value.to_string(), responder);
             let resp = request_channel.send(msg).await;
             assert!(resp.is_ok());
 
@@ -234,6 +247,51 @@ mod tests {
                 panic!("status response failed");
             }
 
+            // check the size
+            let (responder, rx) = async_channel::bounded(10);
+            let msg = Command::Len(responder);
+            request_channel
+                .send(msg)
+                .await
+                .expect("IsEmpty should never fail");
+            let sz = rx.recv().await.expect("receeve should not fail");
+            assert_eq!(sz, 1_usize);
+
+            // get the value from key
+            let (responder, rx) = async_channel::bounded(10);
+            let msg = Command::Get(key.to_string(), responder);
+            request_channel
+                .send(msg)
+                .await
+                .expect("IsEmpty should never fail");
+
+            let v = rx.recv().await.expect("receeve should not fail").unwrap();
+            println!("v: {}", v);
+            assert_eq!(v, value);
+
+            // remove the value by key
+            let (responder, rx) = async_channel::bounded(10);
+            let msg = Command::Remove(key.to_string(), responder);
+            request_channel
+                .send(msg)
+                .await
+                .expect("IsEmpty should never fail");
+
+            let v = rx.recv().await.expect("receeve should not fail").unwrap();
+            println!("v: {}", v);
+            assert_eq!(v, value);
+
+            // the response channel
+            let (responder, rx) = async_channel::bounded(10);
+            let msg = Command::Len(responder);
+            request_channel
+                .send(msg)
+                .await
+                .expect("IsEmpty should never fail");
+            let sz = rx.recv().await.expect("receeve should not fail");
+            assert_eq!(sz, 0_usize);
+
+            // stop/kill the worker
             assert!(request_channel.send(Command::Shutdown).await.is_ok());
         });
     }
