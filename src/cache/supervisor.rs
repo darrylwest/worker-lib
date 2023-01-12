@@ -1,3 +1,6 @@
+/// The worker supervisor is responsible for creating, monitoring and destroying workers in it's pool.
+/// It also serves as the primary API to the outside clients specific to it's domain.  For the cache
+/// worker pool the
 use crate::cache::worker::{Command, Worker};
 use anyhow::Result;
 use log::*;
