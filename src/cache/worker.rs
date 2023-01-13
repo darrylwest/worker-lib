@@ -59,7 +59,7 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
                 }
             }
             Command::Keys(tx) => {
-                let list: Vec<String> = vec![];
+                let list: Vec<String> = cache.keys().map(|x| x.to_string()).collect();
                 if tx.send(list).await.is_err() {
                     error_count += error_count;
                     error!("error returning keys");

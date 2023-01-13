@@ -132,6 +132,8 @@ fn worker_pool() {
         assert_eq!(tst.age, old_age);
 
         // read back the list of keys and ensure that all are in the list (count == count)
+        let list = supervisor.keys().await;
+        assert_eq!(list.len(), ids.len());
 
         // remove one or more and verify
 

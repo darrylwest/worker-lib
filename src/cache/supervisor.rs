@@ -146,6 +146,34 @@ impl Supervisor {
         }
     }
 
+    /// return the keys from all workers
+    pub async fn keys(&self) -> Vec<String> {
+        let mut ks: Vec<String> = vec![];
+
+        for worker in self.workers.iter() {
+            let list = Self::worker_keys(worker).await;
+            ks.extend(list.into_iter())
+        }
+
+        ks
+    }
+
+    async fn worker_keys(worker: &Worker) -> Vec<String> {
+        let request_channel = worker.request_channel();
+        let (responder, rx) = async_channel::bounded(10);
+        let msg = Command::Keys(responder);
+        request_channel
+            .send(msg)
+            .await
+            .expect("should always return");
+
+        let list = rx.recv().await.expect("should always return a size");
+
+        println!("keys: {:?}", list);
+
+        list
+    }
+
     /// return the total number of entries from all workers
     /// NOTE: *good candidate for paralell ops...*
     pub async fn len(&self) -> usize {
@@ -266,8 +294,6 @@ mod tests {
                 }
             }
 
-            // read all the keys and compare to ids list
-
             // update one or more values; re-fetch to verify
             let key = ids[10].to_string();
             println!("{}", &key);
@@ -291,6 +317,10 @@ mod tests {
             println!("{}", resp);
             let tst: TestStruct = serde_json::from_str(&resp).unwrap();
             assert_eq!(tst.age, old_age);
+
+            // read all the keys and compare to ids list
+            let list = supervisor.keys().await;
+            assert_eq!(list.len(), ids.len());
 
             // remove a few and verify the new count
 
