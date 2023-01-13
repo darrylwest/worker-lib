@@ -48,3 +48,20 @@ fn single_worker() {
         assert!(supervisor.shutdown().await.is_ok());
     });
 }
+
+#[test]
+fn worker_pool() {
+    assert!(true);
+
+    // create a small worker pool (4..8)
+
+    // loop to set about 50 values to ensure all workers are invoked
+
+    // read back the list of keys and ensure that all are in the list (count == count)
+
+    // read each value
+
+    // remove one or more and verify
+
+    // shutdown
+}

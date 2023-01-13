@@ -6,6 +6,7 @@ use crate::{
     worker::{JsonString, WorkerStatus},
 };
 use anyhow::{anyhow, Result};
+use domain_keys::keys::RouteKey;
 use log::*;
 
 // add generics to this based on the WorkerTrait
@@ -46,15 +47,22 @@ impl Supervisor {
         Ok(())
     }
 
+    fn get_route(&self, key: &str) -> usize {
+        if self.pool_size > 1 {
+            let rcount = self.pool_size as u8;
+            match RouteKey::parse_route(key, rcount) {
+                Ok(x) => x as usize,
+                _ => 0_usize,
+            }
+        } else {
+            0_usize
+        }
+    }
+
     /// store the value (json blob)
     pub async fn set(&self, key: String, value: JsonString) -> Result<String> {
-        // pick a worker and set the value
-        let worker = if self.pool_size > 1 {
-            let n = fastrand::usize(..self.pool_size);
-            &self.workers[n]
-        } else {
-            &self.workers[0]
-        };
+        let route = self.get_route(&key);
+        let worker = &self.workers[route];
 
         let worker_id = worker.id();
 
