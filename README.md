@@ -36,11 +36,25 @@ The supervisor also...
 * monitors worker health, load etc
 * recyles old or damaged workers replacing with new
 
+## Implementations
+
+### Cache
+
+* mutople workers
+* choice of in-memory or Redis backing
+* serialized with JSON storage
+
+### K/V Store
+
+* multple workers
+* in-memory only
+* typed (no serialization)
+
 ## References
 
 * [Wiki Page](https://github.com/darrylwest/worker-lib/wiki)
 * Async Std
 * Async Channel
 
-###### darryl.west | 2023-01-10
+###### darryl.west | 2023-01-13
 
