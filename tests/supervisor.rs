@@ -34,7 +34,7 @@ impl TestStruct {
 #[test]
 fn worker_pool() {
     async_std::task::block_on(async move {
-        let pool_size = 16;
+        let pool_size = 32;
         let supervisor = Supervisor::new(pool_size)
             .await
             .expect("should create the supervisor");
@@ -59,7 +59,7 @@ fn worker_pool() {
         assert_eq!(supervisor.len().await, 0);
 
         // set a number of of values
-        let set_count: usize = 250;
+        let set_count: usize = 1000;
         let mut ids: Vec<String> = Vec::with_capacity(set_count);
         for _n in 0..set_count {
             let tst = TestStruct::new();
