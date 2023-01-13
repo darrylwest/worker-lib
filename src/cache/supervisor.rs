@@ -9,19 +9,26 @@ use log::*;
 #[derive(Debug, Default)]
 pub struct Supervisor {
     pub pool_size: usize,
+    pub auto_routing: bool,
     pub workers: Vec<Worker>,
 }
 
 impl Supervisor {
     /// create and start the worker pool
     pub async fn new(pool_size: usize) -> Result<Supervisor> {
+        let auto_routing = true;
         let mut workers = vec![];
+
         for _ in 0..pool_size {
             let worker = Worker::new().await;
             workers.push(worker);
         }
 
-        Ok(Supervisor { pool_size, workers })
+        Ok(Supervisor {
+            pool_size,
+            auto_routing,
+            workers,
+        })
     }
 
     /// shut the workers down
@@ -35,6 +42,9 @@ impl Supervisor {
 
         Ok(())
     }
+
+    // should this auto-route?  if the key is a valid route-key, and there are multiple
+    // tasks, and auto-routing is not switched off, then yes.
 }
 
 #[cfg(test)]
