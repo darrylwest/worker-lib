@@ -26,6 +26,7 @@ fn single_worker() {
         }
 
         // get the count and keyx, should be zero
+        assert_eq!(supervisor.len().await, 0);
 
         // set a value
 
@@ -44,5 +45,6 @@ fn single_worker() {
         // check status
 
         // shut down
+        assert!(supervisor.shutdown().await.is_ok());
     });
 }

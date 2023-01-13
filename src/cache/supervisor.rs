@@ -77,6 +77,30 @@ impl Supervisor {
             WorkerStatus::worker_down(worker.id())
         }
     }
+
+    /// return the total number of entries from all workers
+    pub async fn len(&self) -> usize {
+        let mut sz = 0_usize;
+        for worker in self.workers.iter() {
+            sz += Self::worker_len(worker).await;
+        }
+
+        sz
+    }
+
+    async fn worker_len(worker: &Worker) -> usize {
+        let request_channel = worker.request_channel();
+        let (responder, rx) = async_channel::bounded(10);
+        let msg = Command::Len(responder);
+        request_channel
+            .send(msg)
+            .await
+            .expect("should always return");
+
+        let sz = rx.recv().await.expect("should always return a size");
+
+        sz
+    }
 }
 
 #[cfg(test)]
@@ -104,6 +128,8 @@ mod tests {
                 assert!(sts.uptime.starts_with("0 days, 00:00"));
                 assert_eq!(sts.error_count, 0);
             }
+
+            assert_eq!(supervisor.len().await, 0);
 
             assert!(supervisor.shutdown().await.is_ok());
         });
