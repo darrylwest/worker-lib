@@ -18,6 +18,7 @@ fn single_worker() {
         println!("{:?}", status);
         assert_eq!(status.len(), 1);
         for sts in status.iter() {
+            assert_eq!(sts.worker_id.len(), 16);
             assert_eq!(sts.status, OK);
             assert_eq!(sts.state, WorkerState::Idle);
             assert!(sts.uptime.starts_with("0 days, 00:00"));
