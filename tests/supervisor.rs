@@ -1,7 +1,8 @@
-use domain_keys::keys::RouteKey;
-use serde::{Deserialize, Serialize};
 /// integration tests to ensure workers are created and respond to commands
 ///
+use domain_keys::keys::RouteKey;
+use serde::{Deserialize, Serialize};
+use std::env;
 use worker_lib::cache::supervisor::Supervisor;
 use worker_lib::worker::{WorkerState, OK /* DOWN */};
 
@@ -28,6 +29,16 @@ impl TestStruct {
             name: random_word(),
             age: fastrand::u8(21..95),
         }
+    }
+}
+
+fn get_usize_var(key: &str, dflt: usize) -> usize {
+    let resp = env::var(key);
+
+    if let Ok(sn) = resp {
+        usize::from_str_radix(&sn, 10).unwrap()
+    } else {
+        dflt
     }
 }
 
@@ -59,7 +70,8 @@ fn worker_pool() {
         assert_eq!(supervisor.len().await, 0);
 
         // set a number of of values
-        let set_count: usize = 1000;
+        let set_count: usize = get_usize_var("TEST_ITEM_COUNT", 1000);
+        println!("count: {}", set_count);
         let mut ids: Vec<String> = Vec::with_capacity(set_count);
         for _n in 0..set_count {
             let tst = TestStruct::new();
