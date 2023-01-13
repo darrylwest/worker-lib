@@ -266,6 +266,35 @@ mod tests {
                 }
             }
 
+            // read all the keys and compare to ids list
+
+            // update one or more values; re-fetch to verify
+            let key = ids[10].to_string();
+            println!("{}", &key);
+            let json = supervisor
+                .get(key.to_string())
+                .await
+                .expect("should return a result")
+                .unwrap();
+            println!("{}", json);
+            let mut tst: TestStruct = serde_json::from_str(&json).unwrap();
+            assert_eq!(tst.id, key);
+            let old_age = tst.age;
+            tst.age += 1;
+            let json = serde_json::to_string(&tst).unwrap();
+            println!("{}", json);
+            let resp = supervisor
+                .set(key.to_string(), json)
+                .await
+                .expect("should return a result")
+                .unwrap();
+            println!("{}", resp);
+            let tst: TestStruct = serde_json::from_str(&resp).unwrap();
+            assert_eq!(tst.age, old_age);
+
+            // remove a few and verify the new count
+
+            // shut down the supervisor
             assert!(supervisor.shutdown().await.is_ok());
         });
     }

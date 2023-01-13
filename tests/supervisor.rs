@@ -107,9 +107,31 @@ fn worker_pool() {
             }
         }
 
-        // read back the list of keys and ensure that all are in the list (count == count)
+        // read an existing value; update and verify old value
+        let key = ids[10].to_string();
+        println!("{}", &key);
+        let json = supervisor
+            .get(key.to_string())
+            .await
+            .expect("should return a result")
+            .unwrap();
+        println!("{}", json);
+        let mut tst: TestStruct = serde_json::from_str(&json).unwrap();
+        assert_eq!(tst.id, key);
+        let old_age = tst.age;
+        tst.age += 1;
+        let json = serde_json::to_string(&tst).unwrap();
+        println!("{}", json);
+        let resp = supervisor
+            .set(key.to_string(), json)
+            .await
+            .expect("should return a result")
+            .unwrap();
+        println!("{}", resp);
+        let tst: TestStruct = serde_json::from_str(&resp).unwrap();
+        assert_eq!(tst.age, old_age);
 
-        // read each value
+        // read back the list of keys and ensure that all are in the list (count == count)
 
         // remove one or more and verify
 
@@ -143,21 +165,16 @@ fn single_worker() {
         // get the count and keyx, should be zero
         assert_eq!(supervisor.len().await, 0);
 
-        // set a value
+        // create a sample model and set
+        // verify None returned
+        // verify count = 1
+        // update the model
+        // verify old version returned
+        // verify count = 1
 
-        // return the set value
-
-        // set a range of data
-
-        // return one or more
-
-        // return all keys
-
-        // get total count, remove one, verify count = count - 1
-
-        // get keys and iterate to pull values
-
-        // check status
+        // remove the entry
+        // verify old version returned?
+        // verify count = 0
 
         // shut down
         assert!(supervisor.shutdown().await.is_ok());
