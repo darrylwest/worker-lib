@@ -201,8 +201,10 @@ mod tests {
 
             // set a number of of values
             let set_count: usize = 20;
+            let mut ids: Vec<String> = Vec::with_capacity(set_count);
             for _n in 0..set_count {
                 let tst = TestStruct::new();
+                ids.push(tst.id.to_string());
                 assert_eq!(tst.id.len(), 16);
                 let route = supervisor.get_route(&tst.id);
                 println!("{:?} {}", tst, route);
@@ -216,6 +218,7 @@ mod tests {
                 assert_eq!(r, None, "should be none on first set");
             }
 
+            assert_eq!(ids.len(), set_count);
             assert_eq!(supervisor.len().await, set_count);
 
             assert!(supervisor.shutdown().await.is_ok());
