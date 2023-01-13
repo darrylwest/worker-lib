@@ -1,11 +1,11 @@
 use domain_keys::keys::RouteKey;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 /// integration tests to ensure workers are created and respond to commands
 ///
 use worker_lib::cache::supervisor::Supervisor;
 use worker_lib::worker::{WorkerState, OK /* DOWN */};
 
-#[derive(Debug, Default, Clone, Serialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct TestStruct {
     pub id: String,
     pub name: String,
@@ -34,7 +34,7 @@ impl TestStruct {
 #[test]
 fn worker_pool() {
     async_std::task::block_on(async move {
-        let pool_size = 6;
+        let pool_size = 16;
         let supervisor = Supervisor::new(pool_size)
             .await
             .expect("should create the supervisor");
@@ -59,7 +59,7 @@ fn worker_pool() {
         assert_eq!(supervisor.len().await, 0);
 
         // set a number of of values
-        let set_count: usize = 20;
+        let set_count: usize = 250;
         let mut ids: Vec<String> = Vec::with_capacity(set_count);
         for _n in 0..set_count {
             let tst = TestStruct::new();
@@ -80,7 +80,20 @@ fn worker_pool() {
         assert_eq!(ids.len(), set_count);
         assert_eq!(supervisor.len().await, set_count);
 
-        // loop to set about 50 values to ensure all workers are invoked
+        // now read them all back
+        for id in ids.iter() {
+            let resp = supervisor
+                .get(id.to_string())
+                .await
+                .expect("should return an Optional<string> vaule");
+            if let Some(json) = resp {
+                println!("{}", json);
+                let tst: TestStruct = serde_json::from_str(&json).expect("should be able to parse");
+                assert_eq!(tst.id, id.to_string());
+            } else {
+                assert!(false, "should not bew None");
+            }
+        }
 
         // read back the list of keys and ensure that all are in the list (count == count)
 

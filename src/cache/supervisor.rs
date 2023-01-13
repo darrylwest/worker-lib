@@ -174,12 +174,12 @@ impl Supervisor {
 
 #[cfg(test)]
 mod tests {
-    use serde::{Serialize, Deserialize};
+    use serde::{Deserialize, Serialize};
 
     use super::*;
     use crate::worker::{WorkerState, OK};
 
-    #[derive(Debug, Default, Clone, Serialize)]
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
     pub struct TestStruct {
         pub id: String,
         pub name: String,
@@ -249,14 +249,20 @@ mod tests {
 
             assert_eq!(ids.len(), set_count);
             assert_eq!(supervisor.len().await, set_count);
-            
+
             // now read them all back
             for id in ids.iter() {
-                let resp = supervisor.get(id).await.expect("should return an Optional<string> vaule");
+                let resp = supervisor
+                    .get(id.to_string())
+                    .await
+                    .expect("should return an Optional<string> vaule");
                 if let Some(json) = resp {
-                    let tst = serde_json::from_str(json).expect("should be able to parse");
+                    println!("{}", json);
+                    let tst: TestStruct =
+                        serde_json::from_str(&json).expect("should be able to parse");
+                    assert_eq!(tst.id, id.to_string());
                 } else {
-                    assert!("false", "return should not be None");
+                    assert!(false, "should not bew None");
                 }
             }
 
