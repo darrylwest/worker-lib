@@ -8,7 +8,7 @@ use async_channel::Receiver;
 use hashbrown::HashMap;
 use service_uptime::Uptime;
 
-use crate::worker::{JsonString, WorkerState, WorkerStatus};
+use crate::worker::{JsonString, WorkerState, WorkerStatus, OK};
 
 #[derive(Debug, Clone)]
 pub enum Command {
@@ -71,7 +71,7 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
             }
             Command::Status(tx) => {
                 let status = WorkerStatus::new(
-                    "ok".to_string(),
+                    OK.to_string(),
                     state.clone(),
                     uptime.to_string(),
                     error_count,

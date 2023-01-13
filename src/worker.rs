@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 
 pub type JsonString = String;
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub const OK: &str = "Ok";
+pub const DOWN: &str = "Ok";
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkerState {
     #[default]
     Idle,
@@ -15,10 +18,10 @@ pub enum WorkerState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerStatus {
-    status: String,
-    state: WorkerState,
-    uptime: String,
-    error_count: u16,
+    pub status: String,
+    pub state: WorkerState,
+    pub uptime: String,
+    pub error_count: u16,
 }
 
 impl WorkerStatus {
@@ -33,6 +36,16 @@ impl WorkerStatus {
             state,
             uptime,
             error_count,
+        }
+    }
+
+    /// return this when the comm channel is down
+    pub fn worker_down() -> WorkerStatus {
+        WorkerStatus {
+            status: DOWN.to_string(),
+            state: WorkerState::Broken,
+            uptime: String::new(),
+            error_count: 0,
         }
     }
 }

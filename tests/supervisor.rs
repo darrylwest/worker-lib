@@ -1,6 +1,7 @@
 /// integration tests to ensure workers are created and respond to commands
 ///
 use worker_lib::cache::supervisor::Supervisor;
+use worker_lib::worker::{WorkerState, OK /* DOWN */};
 
 #[test]
 fn single_worker() {
@@ -13,6 +14,12 @@ fn single_worker() {
         assert_eq!(supervisor.workers.len(), 1);
 
         // now get the status, should be ok
+        let status = supervisor.status().await;
+        println!("{:?}", status);
+        for sts in status.iter() {
+            assert_eq!(sts.status, OK);
+            assert_eq!(sts.state, WorkerState::Idle);
+        }
 
         // get the count and keyx, should be zero
 

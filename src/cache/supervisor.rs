@@ -1,7 +1,10 @@
 /// The worker supervisor is responsible for creating, monitoring and destroying workers in it's pool.
 /// It also serves as the primary API to the outside clients specific to it's domain.  For the cache
 /// worker pool the
-use crate::cache::worker::{Command, Worker};
+use crate::{
+    cache::worker::{Command, Worker},
+    worker::WorkerStatus,
+};
 use anyhow::Result;
 use log::*;
 
@@ -45,6 +48,35 @@ impl Supervisor {
 
     // should this auto-route?  if the key is a valid route-key, and there are multiple
     // tasks, and auto-routing is not switched off, then yes.
+
+    /// return the status of each worker; if a worker is non-responsive, send worker down response.
+    pub async fn status(&self) -> Vec<WorkerStatus> {
+        let mut status = vec![];
+        for worker in self.workers.iter() {
+            let ws = Self::worker_status(worker).await;
+
+            status.push(ws);
+        }
+
+        status
+    }
+
+    async fn worker_status(worker: &Worker) -> WorkerStatus {
+        let request_channel = worker.request_channel();
+        let (responder, rx) = async_channel::bounded(10);
+        let msg = Command::Status(responder);
+
+        let resp = request_channel.send(msg).await;
+        if resp.is_err() {
+            return WorkerStatus::worker_down();
+        }
+
+        if let Ok(json) = rx.recv().await {
+            serde_json::from_str(&json).expect("should always decode")
+        } else {
+            WorkerStatus::worker_down()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -59,6 +91,9 @@ mod tests {
                 .await
                 .expect("should create the supervisor");
             assert_eq!(supervisor.workers.len(), pool_size);
+
+            let status = supervisor.status().await;
+            println!("{:?}", status);
 
             assert!(supervisor.shutdown().await.is_ok());
         });
