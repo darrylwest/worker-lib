@@ -3,9 +3,9 @@
 /// worker pool the
 use crate::{
     cache::worker::{Command, Worker},
-    worker::WorkerStatus,
+    worker::{JsonString, WorkerStatus},
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use log::*;
 
 // add generics to this based on the WorkerTrait
@@ -46,10 +46,41 @@ impl Supervisor {
         Ok(())
     }
 
-    // should this auto-route?  if the key is a valid route-key, and there are multiple
-    // tasks, and auto-routing is not switched off, then yes.
+    /// store the value (json blob)
+    pub async fn set(&self, key: String, value: JsonString) -> Result<String> {
+        // pick a worker and set the value
+        let worker = if self.pool_size > 1 {
+            let n = fastrand::usize(..self.pool_size);
+            &self.workers[n]
+        } else {
+            &self.workers[0]
+        };
+
+        let worker_id = worker.id();
+
+        let request_channel = worker.request_channel();
+        let (responder, rx) = async_channel::bounded(10);
+        let msg = Command::Set(key, value, responder);
+
+        let resp = request_channel.send(msg).await;
+        if resp.is_err() {
+            let msg = format!("worker id {} is down", worker_id);
+            error!("{}", msg);
+            return Err(anyhow!(msg));
+        }
+
+        if let Some(json) = rx.recv().await? {
+            info!("{}", json);
+            Ok(json)
+        } else {
+            let msg = format!("worker id {} is down", worker_id);
+            error!("{}", msg);
+            Err(anyhow!(msg))
+        }
+    }
 
     /// return the status of each worker; if a worker is non-responsive, send worker down response.
+    /// NOTE: *good candidate for paralell ops...*
     pub async fn status(&self) -> Vec<WorkerStatus> {
         let mut status = vec![];
         for worker in self.workers.iter() {
@@ -79,6 +110,7 @@ impl Supervisor {
     }
 
     /// return the total number of entries from all workers
+    /// NOTE: *good candidate for paralell ops...*
     pub async fn len(&self) -> usize {
         let mut sz = 0_usize;
         for worker in self.workers.iter() {

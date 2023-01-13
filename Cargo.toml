@@ -26,3 +26,4 @@ serde_json = { version = "1.0.91", features = ["preserve_order"] }
 domain_keys = { git = "https://github.com/darrylwest/domain-keys.git" }
 service_uptime = { git = "https://github.com/darrylwest/service-uptime.git" }
 hashbrown = { version = "0.13.1", features = ["serde"] }
+fastrand = "1.8.0"
