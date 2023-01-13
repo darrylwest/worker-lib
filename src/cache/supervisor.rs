@@ -47,7 +47,7 @@ impl Supervisor {
         Ok(())
     }
 
-    fn get_route(&self, key: &str) -> usize {
+    pub fn get_route(&self, key: &str) -> usize {
         if self.pool_size > 1 {
             let rcount = self.pool_size as u8;
             match RouteKey::parse_route(key, rcount) {
@@ -215,6 +215,8 @@ mod tests {
                     .expect("should return ok from set");
                 assert_eq!(r, None, "should be none on first set");
             }
+
+            assert_eq!(supervisor.len().await, set_count);
 
             assert!(supervisor.shutdown().await.is_ok());
         });
