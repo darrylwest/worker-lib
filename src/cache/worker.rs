@@ -71,6 +71,7 @@ pub async fn handler(id: String, rx: Receiver<Command>) -> Result<()> {
             }
             Command::Status(tx) => {
                 let status = WorkerStatus::new(
+                    id.to_string(),
                     OK.to_string(),
                     state.clone(),
                     uptime.to_string(),

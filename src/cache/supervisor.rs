@@ -68,13 +68,13 @@ impl Supervisor {
 
         let resp = request_channel.send(msg).await;
         if resp.is_err() {
-            return WorkerStatus::worker_down();
+            return WorkerStatus::worker_down(worker.id());
         }
 
         if let Ok(json) = rx.recv().await {
             serde_json::from_str(&json).expect("should always decode")
         } else {
-            WorkerStatus::worker_down()
+            WorkerStatus::worker_down(worker.id())
         }
     }
 }
@@ -82,6 +82,7 @@ impl Supervisor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::worker::{WorkerState, OK};
 
     #[test]
     fn new() {
@@ -94,6 +95,15 @@ mod tests {
 
             let status = supervisor.status().await;
             println!("{:?}", status);
+            assert_eq!(status.len(), pool_size);
+            for sts in status.iter() {
+                println!("{}", sts.uptime);
+                assert_eq!(sts.worker_id.len(), 16);
+                assert_eq!(sts.status, OK);
+                assert_eq!(sts.state, WorkerState::Idle);
+                assert!(sts.uptime.starts_with("0 days, 00:00"));
+                assert_eq!(sts.error_count, 0);
+            }
 
             assert!(supervisor.shutdown().await.is_ok());
         });

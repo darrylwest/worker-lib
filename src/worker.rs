@@ -18,6 +18,7 @@ pub enum WorkerState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerStatus {
+    pub worker_id: String,
     pub status: String,
     pub state: WorkerState,
     pub uptime: String,
@@ -26,12 +27,14 @@ pub struct WorkerStatus {
 
 impl WorkerStatus {
     pub fn new(
+        worker_id: String,
         status: String,
         state: WorkerState,
         uptime: String,
         error_count: u16,
     ) -> WorkerStatus {
         WorkerStatus {
+            worker_id,
             status,
             state,
             uptime,
@@ -40,8 +43,9 @@ impl WorkerStatus {
     }
 
     /// return this when the comm channel is down
-    pub fn worker_down() -> WorkerStatus {
+    pub fn worker_down(worker_id: String) -> WorkerStatus {
         WorkerStatus {
+            worker_id,
             status: DOWN.to_string(),
             state: WorkerState::Broken,
             uptime: String::new(),

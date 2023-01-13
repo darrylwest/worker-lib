@@ -16,9 +16,12 @@ fn single_worker() {
         // now get the status, should be ok
         let status = supervisor.status().await;
         println!("{:?}", status);
+        assert_eq!(status.len(), 1);
         for sts in status.iter() {
             assert_eq!(sts.status, OK);
             assert_eq!(sts.state, WorkerState::Idle);
+            assert!(sts.uptime.starts_with("0 days, 00:00"));
+            assert_eq!(sts.error_count, 0);
         }
 
         // get the count and keyx, should be zero
