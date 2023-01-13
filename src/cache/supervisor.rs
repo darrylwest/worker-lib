@@ -60,7 +60,7 @@ impl Supervisor {
     }
 
     /// store the value (json blob)
-    pub async fn set(&self, key: String, value: JsonString) -> Result<String> {
+    pub async fn set(&self, key: String, value: JsonString) -> Result<Option<String>> {
         let route = self.get_route(&key);
         let worker = &self.workers[route];
 
@@ -72,19 +72,19 @@ impl Supervisor {
 
         let resp = request_channel.send(msg).await;
         if resp.is_err() {
-            let msg = format!("worker id {} is down", worker_id);
+            let msg = format!("worker id {} request channel is down", worker_id);
             error!("{}", msg);
             return Err(anyhow!(msg));
         }
 
-        if let Some(json) = rx.recv().await? {
+        let resp = if let Some(json) = rx.recv().await? {
             info!("{}", json);
-            Ok(json)
+            Some(json)
         } else {
-            let msg = format!("worker id {} is down", worker_id);
-            error!("{}", msg);
-            Err(anyhow!(msg))
-        }
+            None
+        };
+
+        Ok(resp)
     }
 
     /// return the status of each worker; if a worker is non-responsive, send worker down response.
@@ -145,8 +145,36 @@ impl Supervisor {
 
 #[cfg(test)]
 mod tests {
+    use serde::Serialize;
+
     use super::*;
     use crate::worker::{WorkerState, OK};
+
+    #[derive(Debug, Default, Clone, Serialize)]
+    pub struct TestStruct {
+        pub id: String,
+        pub name: String,
+        pub age: u8,
+    }
+
+    fn random_word() -> String {
+        let mut word = String::new();
+        word.push(fastrand::uppercase());
+        for _ in 0..10 {
+            word.push(fastrand::lowercase());
+        }
+
+        word
+    }
+    impl TestStruct {
+        fn new() -> TestStruct {
+            TestStruct {
+                id: RouteKey::create(),
+                name: random_word(),
+                age: fastrand::u8(21..95),
+            }
+        }
+    }
 
     #[test]
     fn new() {
@@ -170,6 +198,23 @@ mod tests {
             }
 
             assert_eq!(supervisor.len().await, 0);
+
+            // set a number of of values
+            let set_count: usize = 20;
+            for _n in 0..set_count {
+                let tst = TestStruct::new();
+                assert_eq!(tst.id.len(), 16);
+                let route = supervisor.get_route(&tst.id);
+                println!("{:?} {}", tst, route);
+                assert!(route < pool_size);
+
+                let json = serde_json::to_string(&tst).unwrap();
+                let r = supervisor
+                    .set(tst.id, json)
+                    .await
+                    .expect("should return ok from set");
+                assert_eq!(r, None, "should be none on first set");
+            }
 
             assert!(supervisor.shutdown().await.is_ok());
         });

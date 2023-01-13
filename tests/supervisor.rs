@@ -51,17 +51,42 @@ fn single_worker() {
 
 #[test]
 fn worker_pool() {
-    assert!(true);
+    async_std::task::block_on(async move {
+        let psz = 6;
+        let supervisor = Supervisor::new(psz)
+            .await
+            .expect("should create the supervisor");
 
-    // create a small worker pool (4..8)
+        assert_eq!(supervisor.pool_size, psz);
+        assert_eq!(supervisor.workers.len(), psz);
 
-    // loop to set about 50 values to ensure all workers are invoked
+        // now get the status, should be ok
+        let status = supervisor.status().await;
+        println!("{:?}", status);
+        assert_eq!(status.len(), psz);
 
-    // read back the list of keys and ensure that all are in the list (count == count)
+        for sts in status.iter() {
+            assert_eq!(sts.worker_id.len(), 16);
+            assert_eq!(sts.status, OK);
+            assert_eq!(sts.state, WorkerState::Idle);
+            assert!(sts.uptime.starts_with("0 days, 00:00"));
+            assert_eq!(sts.error_count, 0);
+        }
 
-    // read each value
+        // get the count and keyx, should be zero
+        assert_eq!(supervisor.len().await, 0);
 
-    // remove one or more and verify
+        // create a small worker pool (4..8)
 
-    // shutdown
+        // loop to set about 50 values to ensure all workers are invoked
+
+        // read back the list of keys and ensure that all are in the list (count == count)
+
+        // read each value
+
+        // remove one or more and verify
+
+        // shut down
+        assert!(supervisor.shutdown().await.is_ok());
+    });
 }
