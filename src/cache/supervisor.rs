@@ -47,6 +47,7 @@ impl Supervisor {
         Ok(())
     }
 
+    /// return the route number based on domain route-key logic and the worker pool size
     pub fn get_route(&self, key: &str) -> usize {
         if self.pool_size > 1 {
             let rcount = self.pool_size as u8;
@@ -69,6 +70,34 @@ impl Supervisor {
         let request_channel = worker.request_channel();
         let (responder, rx) = async_channel::bounded(10);
         let msg = Command::Set(key, value, responder);
+
+        let resp = request_channel.send(msg).await;
+        if resp.is_err() {
+            let msg = format!("worker id {} request channel is down", worker_id);
+            error!("{}", msg);
+            return Err(anyhow!(msg));
+        }
+
+        let resp = if let Some(json) = rx.recv().await? {
+            info!("{}", json);
+            Some(json)
+        } else {
+            None
+        };
+
+        Ok(resp)
+    }
+
+    /// store the value (json blob)
+    pub async fn get(&self, key: String) -> Result<Option<String>> {
+        let route = self.get_route(&key);
+        let worker = &self.workers[route];
+
+        let worker_id = worker.id();
+
+        let request_channel = worker.request_channel();
+        let (responder, rx) = async_channel::bounded(10);
+        let msg = Command::Get(key, responder);
 
         let resp = request_channel.send(msg).await;
         if resp.is_err() {
@@ -145,7 +174,7 @@ impl Supervisor {
 
 #[cfg(test)]
 mod tests {
-    use serde::Serialize;
+    use serde::{Serialize, Deserialize};
 
     use super::*;
     use crate::worker::{WorkerState, OK};
@@ -220,6 +249,16 @@ mod tests {
 
             assert_eq!(ids.len(), set_count);
             assert_eq!(supervisor.len().await, set_count);
+            
+            // now read them all back
+            for id in ids.iter() {
+                let resp = supervisor.get(id).await.expect("should return an Optional<string> vaule");
+                if let Some(json) = resp {
+                    let tst = serde_json::from_str(json).expect("should be able to parse");
+                } else {
+                    assert!("false", "return should not be None");
+                }
+            }
 
             assert!(supervisor.shutdown().await.is_ok());
         });

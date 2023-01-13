@@ -60,8 +60,10 @@ fn worker_pool() {
 
         // set a number of of values
         let set_count: usize = 20;
+        let mut ids: Vec<String> = Vec::with_capacity(set_count);
         for _n in 0..set_count {
             let tst = TestStruct::new();
+            ids.push(tst.id.to_string());
             assert_eq!(tst.id.len(), 16);
             let route = supervisor.get_route(&tst.id);
             println!("{:?} {}", tst, route);
@@ -75,8 +77,8 @@ fn worker_pool() {
             assert_eq!(r, None, "should be none on first set");
         }
 
+        assert_eq!(ids.len(), set_count);
         assert_eq!(supervisor.len().await, set_count);
-        // create a small worker pool (4..8)
 
         // loop to set about 50 values to ensure all workers are invoked
 
