@@ -116,6 +116,32 @@ impl Supervisor {
         Ok(resp)
     }
 
+    /// remove the item by key and return the value if it exists
+    pub async fn remove(&self, key: String) -> Result<Option<String>> {
+        let route = self.get_route(&key);
+        let worker = &self.workers[route];
+
+        let request_channel = worker.request_channel();
+        let (responder, rx) = async_channel::bounded(2);
+        let msg = Command::Remove(key, responder);
+
+        let resp = request_channel.send(msg).await;
+        if resp.is_err() {
+            let msg = format!("worker id {} request channel is down", worker.id());
+            error!("{}", msg);
+            return Err(anyhow!(msg));
+        }
+
+        let resp = if let Some(json) = rx.recv().await? {
+            info!("{}", json);
+            Some(json)
+        } else {
+            None
+        };
+
+        Ok(resp)
+    }
+
     /// return the status of each worker; if a worker is non-responsive, send worker down response.
     /// NOTE: *good candidate for paralell ops...*
     pub async fn status(&self) -> Vec<WorkerStatus> {
@@ -323,6 +349,15 @@ mod tests {
             assert_eq!(list.len(), ids.len());
 
             // remove a few and verify the new count
+            let key = ids[3].to_string();
+            if let Some(json) = supervisor.remove(key.to_string()).await.unwrap() {
+                let tst: TestStruct = serde_json::from_str(&json).unwrap();
+                assert_eq!(tst.id, key.to_string());
+            } else {
+                assert!(false);
+            }
+
+            assert_eq!(supervisor.len().await, ids.len() - 1);
 
             // shut down the supervisor
             assert!(supervisor.shutdown().await.is_ok());

@@ -135,7 +135,16 @@ fn worker_pool() {
         let list = supervisor.keys().await;
         assert_eq!(list.len(), ids.len());
 
-        // remove one or more and verify
+        // remove a few and verify the new count
+        let key = ids[3].to_string();
+        if let Some(json) = supervisor.remove(key.to_string()).await.unwrap() {
+            let tst: TestStruct = serde_json::from_str(&json).unwrap();
+            assert_eq!(tst.id, key.to_string());
+        } else {
+            assert!(false);
+        }
+
+        assert_eq!(supervisor.len().await, ids.len() - 1);
 
         // shut down
         assert!(supervisor.shutdown().await.is_ok());
