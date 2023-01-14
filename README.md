@@ -46,7 +46,7 @@ The supervisor also...
 
 ### K/V Store
 
-* multple workers
+* multple workers either split by routing or domain
 * in-memory only
 * typed (no serialization)
 
@@ -56,5 +56,5 @@ The supervisor also...
 * Async Std
 * Async Channel
 
-###### darryl.west | 2023-01-13
+###### darryl.west | 2023-01-14
 
