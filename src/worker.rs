@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub type JsonString = String;
 
 pub const OK: &str = "Ok";
-pub const DOWN: &str = "Ok";
+pub const DOWN: &str = "Down";
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkerState {
