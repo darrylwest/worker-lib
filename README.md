@@ -40,7 +40,7 @@ The supervisor also...
 
 ### Cache
 
-* mutople workers
+* mutiple workers
 * choice of in-memory or Redis backing
 * serialized with JSON storage
 
